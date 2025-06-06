@@ -17,13 +17,13 @@ from trainer import Trainer
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Segmentation Training")
-    parser.add_argument('--dataset', type=str, default='../../data/FoodSeg103/new_dataset')
+    parser.add_argument('--dataset', type=str, required=True)
     parser.add_argument('--model_name', type=str, default='unet')
     parser.add_argument('--in_channels', type=int, default=3)
     parser.add_argument('--num_classes', type=int, default=104)
     parser.add_argument('--batch_size', type=int, default=16)
-    parser.add_argument('--num_workers', type=int, default=12)
-    parser.add_argument('--epochs', type=int, default=30)
+    parser.add_argument('--num_workers', type=int, default=8)
+    parser.add_argument('--epochs', type=int)
 
     parser.add_argument('--optimizer', type=str, default='adamw')
     parser.add_argument('--scheduler', type=str, default='step')
@@ -31,15 +31,16 @@ def parse_args():
     parser.add_argument('--weight_decay', type=float, default=1e-4)
     parser.add_argument('--loss', type=str, default='ce')
     parser.add_argument('--metric', nargs='+', default=['miou', 'dice', 'acc'])
-    parser.add_argument('--main_metric', type=str, default='miou')
+    parser.add_argument('--main_metric', type=str, default='loss')
     parser.add_argument('--early_stopping_patience', type=int, default=None)
     
     parser.add_argument('--weight_path', type=str, default=None)
     parser.add_argument('--is_resume',  action='store_true')
-    parser.add_argument('--save_dir', type=str, default=None)
     parser.add_argument('--use_amp', action='store_true')
-    parser.add_argument('--wandb', action='store_true')
     parser.add_argument('--backbone', type=str)
+
+    parser.add_argument('--save_dir', type=str, default=None)
+    parser.add_argument('--wandb', action='store_true')
     
     return parser.parse_args()
 
@@ -50,7 +51,7 @@ def main():
     # init wandb_logger
     if args.wandb:
         from utils.wandb_utils import WandbLogger
-        wandb_logger = WandbLogger(project="CSC8639", run_name="TrainRun", config=vars(args))
+        wandb_logger = WandbLogger(project="CSC8639", run_name=args.save_dir, config=vars(args))
     else:
         wandb_logger = None
 
@@ -86,9 +87,12 @@ def main():
     # Optimizer & Scheduler
     optimizer = get_optimizer(model=model, name=args.optimizer, lr=args.learning_rate, weight_decay=args.weight_decay, use_param_groups=False) # 可选参数分组
     main_metric = args.main_metric or args.metric[0]
-    scheduler = get_scheduler(optimizer=optimizer, name=args.scheduler, 
-                              # if setup plateau
-                              main_metric=main_metric, patience=6, factor=0.1, threshold=1e-5, min_lr=1e-7)
+    if args.scheduler == 'plateau':
+        scheduler = get_scheduler(optimizer=optimizer, name=args.scheduler, 
+                                # plateau kwargs
+                                main_metric=main_metric, patience=6, factor=0.1, threshold=1e-5, min_lr=1e-7)
+    else:
+        scheduler = get_scheduler(optimizer=optimizer, name=args.scheduler)
     
     # Trainer
     trainer = Trainer(model=model,

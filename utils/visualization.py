@@ -50,6 +50,8 @@ class Visualizer:
     def group_image(self, image, gt_mask, pred_mask):
         """拼接图像 / 叠加图 / GT mask / Pred mask 生成组图"""
         fig, axes = plt.subplots(2, 2, figsize=(16, 6))
+        axes = axes.flatten()
+        
         image_denorm = self.denormalize(image)
         overlay = self.overlay_image(image, pred_mask)
         pred_vis = self.pred_image(pred_mask)

@@ -158,10 +158,10 @@ class PixelAccuracy:
         if self.ignore_index is not None:
             valid_mask = (targets != self.ignore_index)
             correct = ((preds == targets) & valid_mask).float().sum()
-            total = valid_mask.sum()
+            total = valid_mask.float().sum()
         else:
             correct = (preds == targets).float().sum()
-            total = correct.numel()
+            total = preds.numel()
 
         batch_acc = correct / total if total > 0 else torch.tensor(0.0, device=preds.device)
 
@@ -176,10 +176,10 @@ class PixelAccuracy:
             if self.ignore_index is not None:
                 mask = (target_b != self.ignore_index)
                 correct = ((pred_b == target_b) & mask).float().sum()
-                total = mask.sum()
+                total = mask.float().sum()
             else:
                 correct = (pred_b == target_b).float().sum()
-                total = correct.numel()
+                total = pred_b.numel()
             acc = correct / total if total > 0 else torch.tensor(0.0, device=preds.device)
             per_image_acc.append(acc)
 
